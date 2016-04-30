@@ -1,37 +1,59 @@
+
 <?php
-	include('login.php'); // Include Login Script
-
-	if ((isset($_SESSION['username']) != '')) 
-	{
-		header('Location: photos.php');
-	}	
+session_start();
 ?>
+<?php
+include("connection.php"); //Establishing connection with our database
 
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>PHP Login Form with Session</title>
-<link rel="stylesheet" href="style.css" type="text/css" />
-</head>
+$error = ""; //Variable for storing our errors.
+if(isset($_POST["submit"]))
+{
+	if(empty($_POST["username"]) || empty($_POST["password"]))
+	{
+		$error = "Both fields are required.";
+	}else
+	{
+		// Define $username and $password
+		$username=$_POST['username'];
+		$password=$_POST['password'];
 
-<body>
-<div class="main">
-<h1 style="font-family:Cambria, 'Hoefler Text', 'Liberation Serif', Times, 'Times New Roman', serif; font-size:32px;">Welcome to Photo Commenter</h1>
-    <div class="formbox">
-        <h3>Login Form</h3>
-        <br><br>
-        <form method="post" action="login.php">
-            <label>Username:</label><br>
-            <input type="text" name="username" placeholder="username" /><br><br>
-            <label>Password:</label><br>
-            <input type="password" name="password" placeholder="password" />  <br><br>
-            <input type="submit" name="submit" value="Login" />
-        </form>
-        <div class="error"><?php echo $error;?></div>
-        <div class="register">You can register <a href="register.php"> here </a> </div>
-    </div>
+		//clean input photo user name
+		$username = stripslashes( $username );
+		$username=mysqli_real_escape_string($db,$username);
+		$username = htmlspecialchars($username);
+		$password=md5($password);
 
-</div>
-</body>
-</html>
+
+
+		//implement prepared statement to take of sql injection and other vulnerabilities
+
+		//declare instance of connection
+		$sqlcon=new mysqli(DB_SERVER,DB_USERNAME,DB_PASSWORD,DB_DATABASE);
+		if (!($sqlcon->connect_errno)){
+			echo"connection Failed";
+		}
+
+		//prepare statement
+		if($stmt=$sqlcon->prepare("SELECT userID FROM users WHERE username=? and password=?")){
+			//bind parameter
+			$stmt->bind_param('ss',$username,$password);
+			$stmt->execute();
+			//get result
+			$result = $stmt->get_result();
+		}
+
+
+		if( ($row=$result->fetch_row()))
+		{
+			$_SESSION['username'] = $username; // Initializing Session
+			$_SESSION["userid"] = $userid;//user id assigned to session global variable
+			header("location: photos.php"); // Redirecting To Other Page
+		}else
+		{
+			$error = "Incorrect username or password.";
+		}
+
+	}
+}
+
+?>
